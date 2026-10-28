@@ -1,0 +1,227 @@
+Header
+  CHECK KEYWORDS Warn
+  Mesh DB "." "."
+  Include Path ""
+  Results Directory ""
+End
+
+Simulation
+  Max Output Level = 5
+  Coordinate System = Cartesian
+  Coordinate Mapping(3) = 1 2 3
+
+  Coordinate Scaling = 0.001
+
+  Simulation Type = Steady state
+  Steady State Max Iterations = 1
+  Output Intervals(1) = 1
+  Solver Input File = case.sif
+  Post File = case.vtu
+End
+
+Constants
+  Gravity(4) = 0 -1 0 9.82
+  Stefan Boltzmann = 5.670374419e-08
+  Permittivity of Vacuum = 8.85418781e-12
+  Permeability of Vacuum = 1.25663706e-6
+  Boltzmann Constant = 1.380649e-23
+  Unit Charge = 1.6021766e-19
+End
+
+Solver 1
+	Equation = "Static Current Driver"
+	!Exec Solver = Before Simulation
+	Calculate Loads = False
+	Variable = Potential
+	Variable DOFs = 1
+	Procedure = "StatCurrentSolve" "StatCurrentSolver"
+	Stabilize = True
+	Bubbles = False
+	Lumped Mass Matrix = False
+	Optimize Bandwidth = True
+	Calculate Volume Current = True
+	Calculate Joule Heating = False
+	Steady State Convergence Tolerance = 1.0e-7
+	Nonlinear System Convergence Tolerance = 1.0e-9
+	Nonlinear System Max Iterations = 200
+	Nonlinear System Newton After Iterations = 6
+	Nonlinear System Newton After Tolerance = 1.0e-6
+	Nonlinear System Relaxation Factor = 1
+	Linear System Solver = Iterative
+	Linear System Iterative Method = BiCGStab
+	Linear System Max Iterations = 10000
+	Linear System Convergence Tolerance = 1.0e-8
+	Linear System Preconditioning = ILU0
+	Linear System ILUT Tolerance = 1.0e-6
+	Linear System Abort Not Converged = False
+	Linear System Residual Output = 1
+	Linear System Precondition Recompute = 1
+End
+
+Solver 2
+       Equation = "MGDynamics"
+       Exec Solver = After Timestep
+       Variable = "A"
+
+       Procedure = "MagnetoDynamics" "WhitneyAVSolver"
+       Fix Input Current Density = Logical True
+
+       Newton-Raphson Iteration = Logical True
+       Nonlinear System Max Iterations = 1
+       Nonlinear System Convergence Tolerance = 1e-9
+
+       Linear System Symmetric = Logical True
+       Linear System Solver = "Iterative"
+       Linear System Preconditioning = None
+       Linear System Convergence Tolerance = 1e-10
+       Linear System Residual Output = 100
+       Linear System Max Iterations = 5000
+       Linear System Iterative Method = CG
+       Steady State Convergence Tolerance = 1e-9
+End
+
+Solver 3
+ 	Equation = "MGDynamicsCalc"
+	Exec Solver = After Timestep
+  	Procedure = "MagnetoDynamics" "MagnetoDynamicsCalcFields"
+  	Linear System Symmetric = True
+	
+  	Potential Variable = String "A"
+	
+ 	Calculate Magnetic Vector Potential = Logical True
+ 	Calculate Current Density = Logical True
+  	Calculate Joule Heating = Logical True
+  	Calculate Electric Field = Logical True
+ 	Calculate Magnetic Flux Density = Logical True
+	Calculate Magnetic Field Strength = Logical True
+
+  	Steady State Convergence Tolerance = 1
+ 	Linear System Solver = "Iterative"
+ 	Linear System Preconditioning = none !ILU2
+ 	Linear System Residual Output = 0
+  	Linear System Max Iterations = 5000
+ 	Linear System Iterative Method = Bicgstabl
+	Linear System Convergence Tolerance = 5.0e-8
+End 
+
+Solver 4
+  	Exec Solver = After all
+  	! Exec Interval = 2
+  	Equation = "result output"
+  	Procedure = "ResultOutputSolve" "ResultOutputSolver"
+  	Save Geometry Ids = Logical True ! add this line if you want to access boundaries in Paraview
+  	Output File Name = File "zad6.vtu"
+  	Output Format = String vtu
+End
+
+
+Equation 1
+  Name = "Equation1"
+  Active Solvers (4) = 1 2 3 4
+End
+
+
+
+
+Body 1
+  Target Bodies(1) = 1
+  Name = "Plate"
+  Equation = 1
+  Material = 1
+End
+
+Body 2
+  Target Bodies(1) = 2
+  Name = "Coil"
+  Equation = 1
+  Material = 2
+  Body Force = 1
+End
+
+Body 3
+  Target Bodies(1) = 3
+  Name = "Air"
+  Equation = 1
+  Material = 3
+End
+
+
+
+Material 1
+  Name = "Steel (alloy - generic)"
+  Heat Conductivity = 37.2
+  Poisson ratio = 0.285
+  Density = 7850.0
+  Youngs modulus = 200.0e9
+  Heat Capacity = 976.0
+  Sound speed = 5100.0
+  Heat expansion Coefficient = 12.0e-6
+
+  Relative Permeability = 1000.0
+  Electric Conductivity = 0
+Permittivity = 8.85418781e-12
+
+
+End
+
+Material 2
+  Name = "Copper (generic)"
+  Poisson ratio = 0.34
+  Sound speed = 3810.0
+  Heat Conductivity = 401.0
+  Density = 8960.0
+  Heat expansion Coefficient = 16.5e-6
+  Youngs modulus = 115.0e9
+  Heat Capacity = 385.0
+
+  Electric Conductivity = 5.8e7
+  Relative Permeability = 1.0
+Permittivity = 8.85418781e-12
+
+
+End
+
+Material 3
+  Name = "Air (room temperature)"
+  Heat expansion Coefficient = 3.43e-3
+  Heat Capacity = 1005.0
+  Sound speed = 343.0
+  Heat Conductivity = 0.0257
+  Viscosity = 1.983e-5
+  Density = 1.205
+  Relative Permittivity = 1.00059
+
+  Relative Permeability = 1.0
+  Electric Conductivity = 0
+Permittivity = 8.85418781e-12
+
+
+End
+
+Body Force 1
+  Name = "Current Density1"
+  Current Density 1 = Equals Volume current 1
+  Current Density 2 = Equals Volume current 2
+  Current Density 3 = Equals Volume current 3
+End
+
+
+
+Boundary Condition 1
+  Target Boundaries(1) = 31
+  Name = "ground"
+  Potential = 0
+End
+
+Boundary Condition 2
+  Target Boundaries(1) = 32
+  Name = "Ua"
+  Potential = 1
+End
+
+Boundary Condition 3
+  Target Boundaries(1) = 20
+  Name = "far"
+  A = Real 0
+End
+
